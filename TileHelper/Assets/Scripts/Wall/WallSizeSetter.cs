@@ -1,12 +1,19 @@
-﻿using UnityEngine;
+﻿using Data;
+using UnityEngine;
 
 namespace Wall
 {
     public class WallSizeSetter : MonoBehaviour
     {
+        [SerializeField] private float width;
+        [SerializeField] private float height;
+        
         private void Start()
         {
-            var sprite = GetComponent<SpriteMask>().sprite;
+            TileProperties.Width = width;
+            TileProperties.Height = height;
+
+                var sprite = GetComponent<SpriteMask>().sprite;
             var aspectRatio = Screen.width / (float) Screen.height;
 
             var orthoPixelsY = Mathf.CeilToInt(Camera.main.orthographicSize * 2 * 256);
