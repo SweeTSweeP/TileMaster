@@ -1,113 +1,104 @@
 using System;
-using System.Collections;
+using System.Linq;
+using Cysharp.Threading.Tasks;
 using Data;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
+using Object = UnityEngine.Object;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
 
 namespace Tile
 {
-    public class TilePlacer : MonoBehaviour
+    public class TilePlacer : ITilePlacer
     {
+        private const int CountCoefficient = 3;
+        
         private GameObject parent;
         private GameObject tile;
+        private Vector3 finalPosition;
+        private int rowCount;
 
         public event Action<float> AreaCalculated;
 
-        private void Start()
+        public void Setup()
         {
-            tile = LoadTile();
+            if (tile == null) tile = ResourceLoader.LoadTile();
+            if (parent == null) parent = new GameObject("Tiles");
+            finalPosition = GetCameraTopRightCoordinates();
         }
 
-        private IEnumerator PlaceTiles()
+        private void PlaceTiles(float seamSize, float angleValue, float biasValue)
         {
-            if (parent == null) parent = new GameObject("Tiles");
-            var finalPosition = GetCameraStartPosition();
-            var position = new Vector3(finalPosition.x * -2, finalPosition.y * -2, finalPosition.z);
-            var rowCount = 0;
+            rowCount = 0;
 
-            while (position.y < finalPosition.y * 2)
-            {
-                PositionRow();
-            }
+            var position = new Vector3(
+                finalPosition.x * -CountCoefficient, 
+                finalPosition.y * -CountCoefficient,
+                finalPosition.z);
 
-            PositionRow();
-            parent.transform.eulerAngles = new Vector3(0, 0, -TileProperties.AngleValue);
+            while (position.y < finalPosition.y * CountCoefficient) PositionRow();
 
-            yield return null;
-            
-            CalculateArea();
+            parent.transform.eulerAngles = new Vector3(0, 0, -angleValue);
 
             void PositionRow()
             {
                 var sprite = tile.GetComponent<SpriteRenderer>();
 
-                while (position.x < finalPosition.x * 2)
+                while (position.x < finalPosition.x * CountCoefficient)
                 {
                     sprite = InstantiateTile(position).GetComponent<SpriteRenderer>();
 
                     position = new Vector3(
-                        sprite.bounds.max.x + sprite.bounds.size.x / 2 + TileProperties.SeamSize,
+                        sprite.bounds.max.x + sprite.bounds.size.x / 2 + seamSize,
                         position.y,
                         position.z);
                 }
 
-                InstantiateTile(position);
-
                 rowCount++;
                 position = new Vector3(
-                    finalPosition.x * -2 + TileProperties.BiasValue * rowCount,
-                    position.y + sprite.bounds.size.y + TileProperties.SeamSize,
+                    finalPosition.x * -CountCoefficient + biasValue * rowCount,
+                    position.y + sprite.bounds.size.y + seamSize,
                     position.z);
             }
         }
 
         private void CalculateArea()
         {
-            var area = 0f;
+            var area = parent.transform
+                .Cast<Transform>()
+                .Where(child => child.GetComponent<SpriteRenderer>().isVisible)
+                .Select(child => TileProperties.Width * TileProperties.Height).Sum();
 
-            foreach (Transform child in parent.transform)
-            {
-                if (child.GetComponent<SpriteRenderer>().isVisible)
-                {
-                    area += TileProperties.Width * TileProperties.Height;
-                }
-            }
-            
             AreaCalculated?.Invoke(area);
         }
 
         private GameObject InstantiateTile(Vector3 position)
         {
-            var spawnedTile = Instantiate(tile, position, Quaternion.identity, parent.transform);
-
+            var spawnedTile = Object.Instantiate(tile, position, Quaternion.identity, parent.transform);
+            
             return spawnedTile;
         }
 
         private void ClearTiles()
         {
-            if (parent != null)
-            {
-                parent.transform.eulerAngles = Vector3.zero;
+            if (parent == null) return;
+            
+            parent.transform.eulerAngles = Vector3.zero;
 
-                foreach (Transform child in parent.transform)
-                {
-                    Destroy(child.gameObject);
-                }
-            }
+            foreach (Transform child in parent.transform) Object.Destroy(child.gameObject);
         }
 
-        private Vector3 GetCameraStartPosition() =>
+        private Vector3 GetCameraTopRightCoordinates() =>
             Camera.main.ViewportToWorldPoint(new Vector3(1, 1, Camera.main.nearClipPlane));
 
-        private GameObject LoadTile() =>
-            Addressables.LoadAssetAsync<GameObject>("Tile").WaitForCompletion();
-
-        public void BuildWall()
+        public async UniTaskVoid PlaceWallTiles(float seamSize = 0, float angleValue = 0, float biasValue = 0)
         {
             ClearTiles();
-            StartCoroutine(PlaceTiles());
+            PlaceTiles(seamSize, angleValue, biasValue);
+
+            await UniTask.NextFrame();
+            
+            CalculateArea();
         }
     }
 }

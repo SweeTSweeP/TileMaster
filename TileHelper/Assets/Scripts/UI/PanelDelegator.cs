@@ -1,17 +1,30 @@
-using Data;
 using Tile;
 using TMPro;
 using UnityEngine;
+using Zenject;
 
 namespace UI
 {
     public class PanelDelegator : MonoBehaviour
     {
+        private const int OneMeter = 100;
+        
         [SerializeField] private TMP_InputField seamSizeField;
         [SerializeField] private TMP_InputField angleValueField;
         [SerializeField] private TMP_InputField biasValueField;
         [SerializeField] private TMP_Text areaText;
-        [SerializeField] private TilePlacer tilePlacer;
+
+        private ITilePlacer tilePlacer;
+
+        private float seamSize;
+        private float angleValue;
+        private float biasValue;
+
+        [Inject]
+        public void Construct(ITilePlacer tilePlacer)
+        {
+            this.tilePlacer = tilePlacer;
+        }
 
         private void Start()
         {
@@ -30,28 +43,25 @@ namespace UI
 
         private void OnSeamValueChanged()
         {
-            float.TryParse(seamSizeField.text, out var result);
-            TileProperties.SeamSize = result/100;
-            tilePlacer.BuildWall();
+            if (float.TryParse(seamSizeField.text, out var result)) seamSize = result / OneMeter;
+            tilePlacer.PlaceWallTiles(seamSize, angleValue, biasValue);
         }
 
         private void OnAngleValueChanged()
         {
-            float.TryParse(angleValueField.text, out var result);
-            TileProperties.AngleValue = result;
-            tilePlacer.BuildWall();
+            if (float.TryParse(angleValueField.text, out var result)) angleValue = result;
+            tilePlacer.PlaceWallTiles(seamSize, angleValue, biasValue);
         }
 
         private void OnBiasValueChanged()
         {
-            float.TryParse(biasValueField.text, out var result);
-            TileProperties.BiasValue = result/100;
-            tilePlacer.BuildWall();
+            if (float.TryParse(biasValueField.text, out var result)) biasValue = result / OneMeter;
+            tilePlacer.PlaceWallTiles(seamSize, angleValue, biasValue);
         }
 
         private void OnAreaCalculated(float area)
         {
-            areaText.text = $"Area: {area}";
+            areaText.text = $"Area: {area/OneMeter}";
         }
     }
 }

@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using UnityEngine.AddressableAssets;
+﻿using Data;
+using UnityEngine;
 
 namespace Wall
 {
@@ -7,7 +7,7 @@ namespace Wall
     {
         public void BuildWall()
         {
-            var mask = GetWall();
+            var mask = ResourceLoader.GetWall();
             
             Object.Instantiate(mask, Vector3.zero, Quaternion.identity);
 
@@ -24,8 +24,5 @@ namespace Wall
 
             mask.transform.localScale = newScale;
         }
-
-        private GameObject GetWall() => 
-            Addressables.LoadAssetAsync<GameObject>("Mask").WaitForCompletion();
     }
 }
