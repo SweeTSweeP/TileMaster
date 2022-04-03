@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Data;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -19,7 +20,7 @@ namespace Tile
             tile = LoadTile();
         }
 
-        private void PlaceTiles()
+        private IEnumerator PlaceTiles()
         {
             if (parent == null) parent = new GameObject("Tiles");
             var finalPosition = GetCameraStartPosition();
@@ -33,8 +34,10 @@ namespace Tile
 
             PositionRow();
             parent.transform.eulerAngles = new Vector3(0, 0, -TileProperties.AngleValue);
+
+            yield return null;
             
-            //CalculateArea();
+            CalculateArea();
 
             void PositionRow()
             {
@@ -42,7 +45,7 @@ namespace Tile
 
                 while (position.x < finalPosition.x * 2)
                 {
-                    sprite = InstantiateTile(tile, position).GetComponent<SpriteRenderer>();
+                    sprite = InstantiateTile(position).GetComponent<SpriteRenderer>();
 
                     position = new Vector3(
                         sprite.bounds.max.x + sprite.bounds.size.x / 2 + TileProperties.SeamSize,
@@ -50,7 +53,7 @@ namespace Tile
                         position.z);
                 }
 
-                InstantiateTile(tile, position);
+                InstantiateTile(position);
 
                 rowCount++;
                 position = new Vector3(
@@ -66,13 +69,16 @@ namespace Tile
 
             foreach (Transform child in parent.transform)
             {
-                area += child.GetComponent<Tile>().CalculateArea();
+                if (child.GetComponent<SpriteRenderer>().isVisible)
+                {
+                    area += TileProperties.Width * TileProperties.Height;
+                }
             }
             
             AreaCalculated?.Invoke(area);
         }
 
-        private GameObject InstantiateTile(GameObject tile, Vector3 position)
+        private GameObject InstantiateTile(Vector3 position)
         {
             var spawnedTile = Instantiate(tile, position, Quaternion.identity, parent.transform);
 
@@ -101,7 +107,7 @@ namespace Tile
         public void BuildWall()
         {
             ClearTiles();
-            PlaceTiles();
+            StartCoroutine(PlaceTiles());
         }
     }
 }

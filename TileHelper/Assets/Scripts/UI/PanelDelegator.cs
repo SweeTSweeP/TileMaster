@@ -32,18 +32,21 @@ namespace UI
         {
             float.TryParse(seamSizeField.text, out var result);
             TileProperties.SeamSize = result/100;
+            tilePlacer.BuildWall();
         }
 
         private void OnAngleValueChanged()
         {
             float.TryParse(angleValueField.text, out var result);
             TileProperties.AngleValue = result;
+            tilePlacer.BuildWall();
         }
 
         private void OnBiasValueChanged()
         {
             float.TryParse(biasValueField.text, out var result);
             TileProperties.BiasValue = result/100;
+            tilePlacer.BuildWall();
         }
 
         private void OnAreaCalculated(float area)
